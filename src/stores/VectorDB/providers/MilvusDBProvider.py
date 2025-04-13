@@ -13,10 +13,11 @@ class MilvusDBProvider(VectorDBInterface):
         self.db_path = db_path
         self.distance_method = None
         self.token=token
-        if distance_method == DistanceMethodEnums.COSINE.value:
-            pass
-        elif distance_method == DistanceMethodEnums.DOT.value:
-            pass
+        if distance_method not in [DistanceMethodEnums.COSINE.value, 
+                                   DistanceMethodEnums.DOT.value,
+                                   DistanceMethodEnums.L2.value]:
+            raise ValueError(f"Invalid distance method: {distance_method}")
+        self.distance_method = distance_method
         self.logger = logging.getLogger(__name__)
 
     def connect(self):
@@ -26,7 +27,9 @@ class MilvusDBProvider(VectorDBInterface):
          )
         
     def disconnect(self):
-        self.client = None
+        if self.client:
+            self.client.close()
+            self.client = None
 
     def is_collection_existed(self, collection_name: str) -> bool:
         res = self.client.list_collections()
@@ -46,9 +49,11 @@ class MilvusDBProvider(VectorDBInterface):
     
     def delete_collection(self, collection_name: str):
         if self.is_collection_existed(collection_name):
-            return self.client.drop_collection(
+            self.client.drop_collection(
                 collection_name=collection_name
             )
+            return True
+        return False
         
     def create_collection(self, collection_name: str, 
                                 embedding_size: int,
@@ -63,7 +68,7 @@ class MilvusDBProvider(VectorDBInterface):
             )
             schema.add_field(field_name="metadata",datatype=DataType.JSON)
             schema.add_field(field_name="record_id",datatype=DataType.VARCHAR)
-            schema.add_field(field_name="vector", datatype=DataType.FLOAT_VECTOR, dim=1024)
+            schema.add_field(field_name="vector", datatype=DataType.FLOAT_VECTOR, dim=embedding_size)
             schema.add_field(field_name="text", datatype=DataType.VARCHAR, max_length=1050)
             index_params = self.client.prepare_index_params()
 
@@ -74,8 +79,8 @@ class MilvusDBProvider(VectorDBInterface):
 
             index_params.add_index(
                 field_name="vector", 
-                index_type="AUTOINDEX",
-                metric_type="COSINE"
+                index_type="IVF_FLAT",
+                metric_type=self.distance_method
             )
             self.client.create_collection(
             collection_name=collection_name,
