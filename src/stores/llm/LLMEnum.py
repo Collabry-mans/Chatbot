@@ -17,7 +17,8 @@ class CoHereEnums(Enum):
     DOCUMENT = "search_document"
     QUERY = "search_query"
 
-
+class GIMINIEnums(Enum):
+    pass
 class DocumentTypeEnum(Enum):
     DOCUMENT = "document"
     QUERY = "query"
