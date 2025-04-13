@@ -1,0 +1,160 @@
+from pymilvus import Collection, connections,MilvusClient,DataType
+from ..VectorDBInterface import VectorDBInterface
+from ..VectorDBEnum import DistanceMethodEnums
+import logging
+from typing import List
+import json
+
+class MilvusDBProvider(VectorDBInterface):
+
+    def __init__(self, db_path: str, distance_method: str,token:str):
+
+        self.client = None
+        self.db_path = db_path
+        self.distance_method = None
+        self.token=token
+        if distance_method == DistanceMethodEnums.COSINE.value:
+            pass
+        elif distance_method == DistanceMethodEnums.DOT.value:
+            pass
+        self.logger = logging.getLogger(__name__)
+
+    def connect(self):
+        self.client = MilvusClient(
+        uri=self.db_path,
+        token=self.token
+         )
+        
+    def disconnect(self):
+        self.client = None
+
+    def is_collection_existed(self, collection_name: str) -> bool:
+        res = self.client.list_collections()
+        if collection_name in res:
+            return True
+        else:
+            return False
+    
+    def list_all_collections(self) -> List:
+        return self.client.list_collections()
+    
+    def get_collection_info(self, collection_name: str) -> dict:
+        return self.client.describe_collection(
+            collection_name=collection_name
+        )
+
+    
+    def delete_collection(self, collection_name: str):
+        if self.is_collection_existed(collection_name):
+            return self.client.drop_collection(
+                collection_name=collection_name
+            )
+        
+    def create_collection(self, collection_name: str, 
+                                embedding_size: int,
+                                do_reset: bool = False):
+        if do_reset:
+            _ = self.delete_collection(collection_name=collection_name)
+        
+        if not self.is_collection_existed(collection_name):
+            schema=MilvusClient.create_schema(
+                auto_id=True,
+                enable_dynamic_field=True,
+            )
+            schema.add_field(field_name="metadata",datatype=DataType.JSON)
+            schema.add_field(field_name="record_id",datatype=DataType.VARCHAR)
+            schema.add_field(field_name="vector", datatype=DataType.FLOAT_VECTOR, dim=1024)
+            schema.add_field(field_name="text", datatype=DataType.VARCHAR, max_length=1050)
+            index_params = self.client.prepare_index_params()
+
+            index_params.add_index(
+                field_name="record_id",
+                index_type="AUTOINDEX"
+            )
+
+            index_params.add_index(
+                field_name="vector", 
+                index_type="AUTOINDEX",
+                metric_type="COSINE"
+            )
+            self.client.create_collection(
+            collection_name=collection_name,
+            schema=schema,
+            index_params=index_params
+             )
+            return True
+        return False
+    
+    def insert_one(self, collection_name: str, text: str, vector: list,
+                         metadata: dict = None, 
+                         record_id: str = None):
+        
+        if not self.is_collection_existed(collection_name):
+            self.logger.error(f"Can not insert new record to non-existed collection: {collection_name}")
+            return False
+        
+        try:
+            data=[
+                {
+                    "record_id":record_id,
+                    "metadata":json.dumps(metadata),
+                    "text":text,
+                    "vector":vector
+                }
+            ]
+            res=self.client.insert(
+                collection_name=collection_name,
+                data=data
+            )
+        except Exception as e:
+            self.logger.error(f"Error while inserting batch: {e}")
+            return False
+
+        return True
+    
+    def insert_many(self, collection_name: str, texts: list,
+                    vectors: list, metadata: list = None,
+                    record_ids: list = None, batch_size: int = 50):
+
+        if metadata is None:
+            metadata = [None] * len(texts)
+
+        if record_ids is None:
+            record_ids = list(range(len(texts)))  # or use uuid if needed
+
+        for i in range(0, len(texts), batch_size):
+            batch_end = i + batch_size
+
+            batch_texts = texts[i:batch_end]
+            batch_vectors = vectors[i:batch_end]
+            batch_metadata = metadata[i:batch_end]
+            batch_ids = record_ids[i:batch_end]
+
+            # Build data as list of dictionaries
+            batch_data = [
+                {
+                    "id": batch_ids[j],
+                    "vector": batch_vectors[j],
+                    "text": batch_texts[j],
+                    "metadata": batch_metadata[j]
+                }
+                for j in range(len(batch_texts))
+            ]
+
+            try:
+                self.client.insert(collection_name=collection_name, data=batch_data)
+            except Exception as e:
+                self.logger.error(f"Error while inserting batch: {e}")
+                return False
+
+        return True
+            
+    def search_by_vector(self, collection_name: str, vector: list, limit: int = 5):
+
+        return self.client.search(
+            collection_name=collection_name,
+            data=[vector],
+            anns_field="vector",
+            limit=limit,
+            search_params={"metric_type":"IP"}
+        )
