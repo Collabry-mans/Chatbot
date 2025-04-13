@@ -161,5 +161,5 @@ class MilvusDBProvider(VectorDBInterface):
             data=[vector],
             anns_field="vector",
             limit=limit,
-            search_params={"metric_type":"IP"}
+            search_params=self.distance_method
         )
