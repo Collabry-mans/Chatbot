@@ -4,5 +4,6 @@ class VectorDBEnums(Enum):
     MILVUS="MILVUS"
 
 class DistanceMethodEnums(Enum):
-    COSINE = "cosine"
-    DOT = "dot"
+    COSINE = "COSINE"
+    DOT = "DOT"
+    L2="l2"
