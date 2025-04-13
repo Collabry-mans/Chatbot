@@ -133,7 +133,7 @@ class MilvusDBProvider(VectorDBInterface):
             # Build data as list of dictionaries
             batch_data = [
                 {
-                    "id": batch_ids[j],
+                    "record_id": batch_ids[j],
                     "vector": batch_vectors[j],
                     "text": batch_texts[j],
                     "metadata": batch_metadata[j]
