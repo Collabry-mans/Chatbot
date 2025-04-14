@@ -15,3 +15,6 @@ class ResponseSignal(Enum):
     PROJECT_NOT_FOUNF_ERROR="project_not_found"
     INSERT_INTO_VECTORDB_ERROR="insert_into_vector_db_error"
     INSERT_INTO_VECTORDB_success="insert_into_vector_db_success"
+    VECTORDB_COLLECTION_RETRIEVED="vectordb_collection_retrieved"
+    VECTORDB_SEARCH_ERROR="vectordb_search_error"
+    VECTORDB_SEARCH_SUCCESS="vectordb_search_success"
