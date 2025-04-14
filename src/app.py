@@ -29,8 +29,8 @@ async def shutdown_span():
     app.vectordb_client.disconnect()
 
 
-app.router.lifespan.on_startup.append(startup_span)
-app.router.lifespan.on_shutdown.append(shutdown_span)
+app.on_event("startup")(startup_span)
+app.on_event("shutdown")(startup_span)
 
 app.include_router(base.base_router)
 app.include_router(data.data_router)
