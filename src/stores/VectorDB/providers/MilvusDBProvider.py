@@ -72,10 +72,10 @@ class MilvusDBProvider(VectorDBInterface):
             schema.add_field(field_name="text", datatype=DataType.VARCHAR, max_length=1050)
             index_params = self.client.prepare_index_params()
 
-            index_params.add_index(
-                field_name="record_id",
-                index_type="AUTOINDEX"
-            )
+           # index_params.add_index(
+           #     field_name="record_id",
+           #     index_type="AUTOINDEX"
+           # )
 
             index_params.add_index(
                 field_name="vector", 
