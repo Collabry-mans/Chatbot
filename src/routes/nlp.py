@@ -32,7 +32,7 @@ async def index_project(request:Request,project_id:str,push_request:PushRequest)
         return JSONResponse(
             status_code=status.HTTP_400_BAD_REQUEST,
             content={
-                "signal":ResponseSignal.PROJECT_NOT_FOUNF_ERROR.value
+                "signal":ResponseSignal.PROJECT_NOT_FOUND_ERROR.value
             }
         )
     nlp_controller=NLPController(
