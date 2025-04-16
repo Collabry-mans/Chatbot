@@ -1,5 +1,6 @@
 from ..LLMInterface import LLMInterface
 from ..LLMEnum import DocumentTypeEnum
+from sentence_transformers import SentenceTransformer
 import google.generativeai as genai
 import logging
 
@@ -7,6 +8,7 @@ class GIMINIProvider(LLMInterface):
     def __init__(self, api_key: str,
                  default_input_max_characters: int = 1000,
                  default_generation_max_output_tokens: int = 1000,
+                 embedding_model_id:str=None,
                  default_generation_temperature: float = 0.1):
         
         self.api_key = api_key
@@ -15,7 +17,7 @@ class GIMINIProvider(LLMInterface):
         self.default_generation_temperature = default_generation_temperature
 
         self.generation_model_id = "models/gemini-pro"
-        self.embedding_model_id = "models/embedding-001"
+        self.embedding_model_id = embedding_model_id
         self.embedding_size = None  
         
         genai.configure(api_key=self.api_key)
@@ -68,12 +70,9 @@ class GIMINIProvider(LLMInterface):
             task_type = "retrieval_query"
 
         try:
-            model = genai.EmbeddingModel(self.embedding_model_id)
-            response = model.embed_content(
-                content=self.process_text(text),
-                task_type=task_type
-            )
-            return response.embedding
+            model = SentenceTransformer(self.embedding_model_id)
+            response = model.encode(text)
+            return response
         except Exception as e:
             self.logger.error(f"Error during text embedding: {e}")
             return None
