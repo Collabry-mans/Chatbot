@@ -9,7 +9,7 @@ class NLPController(BaseController):
     def __init__(self, vectordb_client, generation_client, 
                  embedding_client, template_parser):
         super().__init__()
-
+        self.collection_name=self.app_settings.VECTOR_DB_COLLECTION_NAME
         self.vectordb_client = vectordb_client
         self.generation_client = generation_client
         self.embedding_client = embedding_client
@@ -19,12 +19,10 @@ class NLPController(BaseController):
         return f"collection_{project_id}".strip()
     
     def reset_vector_db_collection(self, project: Project):
-        collection_name = self.create_collection_name(project_id=project.project_id)
-        return self.vectordb_client.delete_collection(collection_name=collection_name)
+        return self.vectordb_client.delete_collection(collection_name=self.collection_name)
     
     def get_vector_db_collection_info(self, project: Project):
-        collection_name = self.create_collection_name(project_id=project.project_id)
-        collection_info = self.vectordb_client.get_collection_info(collection_name=collection_name)
+        collection_info = self.vectordb_client.get_collection_info(collection_name=self.collection_name)
 
         return json.loads(
             json.dumps(collection_info, default=lambda x: x.__dict__)
@@ -34,8 +32,6 @@ class NLPController(BaseController):
                                    chunks_ids: List[int], 
                                    do_reset: bool = False):
         
-        # step1: get collection name
-        collection_name = self.create_collection_name(project_id=project.project_id)
 
         # step2: manage items
         texts = [ c.chunk_text for c in chunks ]
@@ -48,14 +44,14 @@ class NLPController(BaseController):
 
         # step3: create collection if not exists
         _ = self.vectordb_client.create_collection(
-            collection_name=collection_name,
+            collection_name=self.collection_name,
             embedding_size=self.embedding_client.embedding_size,
             do_reset=do_reset,
         )
 
         # step4: insert into vector db
         _ = self.vectordb_client.insert_many(
-            collection_name=collection_name,
+            collection_name=self.collection_name,
             texts=texts,
             metadata=metadata,
             vectors=vectors,
@@ -65,8 +61,7 @@ class NLPController(BaseController):
         return True
     def search_vector_db_collection(self, project: Project, text: str, limit: int = 10):
 
-        # step1: get collection name
-        collection_name = self.create_collection_name(project_id=project.project_id)
+
 
         # step2: get text embedding vector
         vector = self.embedding_client.embed_text(text=text, 
@@ -77,7 +72,7 @@ class NLPController(BaseController):
 
         # step3: do semantic search
         results = self.vectordb_client.search_by_vector(
-            collection_name=collection_name,
+            collection_name=self.collection_name,
             vector=vector,
             limit=limit
         )
