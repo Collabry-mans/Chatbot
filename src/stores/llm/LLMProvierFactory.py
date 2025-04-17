@@ -1,5 +1,5 @@
 from .LLMEnum import LLMEnums
-from .providers import OpenAIProvider, CoHereProvider,GiminiProvider
+from .providers import OpenAIProvider, CoHereProvider,GIMINIProvider
 
 class LLMProviderFactory:
     def __init__(self, config: dict):
@@ -22,12 +22,13 @@ class LLMProviderFactory:
                 default_generation_max_output_tokens=self.config.GENERATION_DEFAULT_MAX_TOKENS,
                 default_generation_temperature=self.config.GENERATION_DEFAULT_TEMPERATURE
             )
-        if provider ==LLMEnums.GIMINI.value:
-            return GiminiProvider(
-                api_key = self.config.GIMINI_API_KEY,
+        if provider == LLMEnums.GIMINI.value:
+            return GIMINIProvider(
+                api_key = self.config.GOOGLE_API_KEY,
                 embedding_model_id=self.config.EMBEDDING_MODEL_ID,
                 default_input_max_characters=self.config.INPUT_DEFAULT_MAX_CHARACTERS,
                 default_generation_max_output_tokens=self.config.GENERATION_DEFAULT_MAX_TOKENS,
-                default_generation_temperature=self.config.GENERATION_DEFAULT_TEMPERATURE
+                default_generation_temperature=self.config.GENERATION_DEFAULT_TEMPERATURE,
+                generation_model_id=self.config.GENERATION_MODEL_ID
             )
         return None
