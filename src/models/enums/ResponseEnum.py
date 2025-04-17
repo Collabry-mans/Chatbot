@@ -18,3 +18,5 @@ class ResponseSignal(Enum):
     VECTORDB_COLLECTION_RETRIEVED="vectordb_collection_retrieved"
     VECTORDB_SEARCH_ERROR="vectordb_search_error"
     VECTORDB_SEARCH_SUCCESS="vectordb_search_success"
+    VECTORDB_FILE_NOT_FOUND="project_not_found"
+    VECTORDB_FILE_FOUND="project_deleted_successfully"
