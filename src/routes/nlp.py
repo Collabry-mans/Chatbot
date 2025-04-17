@@ -2,7 +2,7 @@ from fastapi import FastAPI,APIRouter,status,Request
 from fastapi.responses import JSONResponse
 from models.ProjectModel import ProjectModel
 from models.ChunkModel import ChunkModel
-from schemes.nlp import PushRequest,SearchRequest
+from .schemes.nlp import PushRequest,SearchRequest
 from controllers import NLPController
 from models.enums import ResponseSignal
 import logging
