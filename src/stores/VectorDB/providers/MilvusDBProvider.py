@@ -68,14 +68,15 @@ class MilvusDBProvider(VectorDBInterface):
             )
             schema.add_field(field_name="metadata",datatype=DataType.JSON)
             schema.add_field(field_name="record_id",datatype=DataType.VARCHAR)
+            schema.add_field(field_name="doc_id",datatype=DataType.VARCHAR)
             schema.add_field(field_name="vector", datatype=DataType.FLOAT_VECTOR, dim=embedding_size)
             schema.add_field(field_name="text", datatype=DataType.VARCHAR, max_length=1050)
             index_params = self.client.prepare_index_params()
 
-           # index_params.add_index(
-           #     field_name="record_id",
-           #     index_type="AUTOINDEX"
-           # )
+            index_params.add_index(
+                field_name="record_id",
+                index_type="AUTOINDEX"
+            )
 
             index_params.add_index(
                 field_name="vector", 
@@ -92,7 +93,7 @@ class MilvusDBProvider(VectorDBInterface):
     
     def insert_one(self, collection_name: str, text: str, vector: list,
                          metadata: dict = None, 
-                         record_id: str = None):
+                         doc_id: str = None):
         
         if not self.is_collection_existed(collection_name):
             self.logger.error(f"Can not insert new record to non-existed collection: {collection_name}")
@@ -101,7 +102,7 @@ class MilvusDBProvider(VectorDBInterface):
         try:
             data=[
                 {
-                    "record_id":record_id,
+                    "doc_id":doc_id,
                     "metadata":json.dumps(metadata),
                     "text":text,
                     "vector":vector
@@ -119,13 +120,13 @@ class MilvusDBProvider(VectorDBInterface):
     
     def insert_many(self, collection_name: str, texts: list,
                     vectors: list, metadata: list = None,
-                    record_ids: list = None, batch_size: int = 50):
+                    doc_ids: list = None, batch_size: int = 50):
 
         if metadata is None:
             metadata = [None] * len(texts)
 
-        if record_ids is None:
-            record_ids = list(range(len(texts)))  # or use uuid if needed
+        if doc_ids is None:
+            return False
 
         for i in range(0, len(texts), batch_size):
             batch_end = i + batch_size
@@ -133,7 +134,7 @@ class MilvusDBProvider(VectorDBInterface):
             batch_texts = texts[i:batch_end]
             batch_vectors = vectors[i:batch_end]
             batch_metadata = metadata[i:batch_end]
-            batch_ids = record_ids[i:batch_end]
+            batch_ids = doc_ids[i:batch_end]
 
             # Build data as list of dictionaries
             batch_data = [
