@@ -140,3 +140,38 @@ async def search_index(request: Request, project_id: str, search_request: Search
             "results": [ result.dict()  for result in results ]
         }
     )
+
+@nlp_router.post("/index/delete/{project_id}")
+async def delete(request: Request, project_id: str, search_request: SearchRequest):
+    
+    project_model = await ProjectModel.create_instance(
+        db_client=request.app.db_client
+    )
+
+    project = await project_model.get_project_or_create_one(
+        project_id=project_id
+    )
+
+    nlp_controller = NLPController(
+        vectordb_client=request.app.vectordb_client,
+        generation_client=request.app.generation_client,
+        embedding_client=request.app.embedding_client,
+        template_parser=request.app.template_parser,
+    )
+    results=nlp_controller.delete_file_from_vectorDB_by_ID(project=project,project_id=project)
+
+    if not results:
+        return JSONResponse(
+                status_code=status.HTTP_204_NO_CONTENT,
+                content={
+                    "signal": ResponseSignal.VECTORDB_FILE_NOT_FOUND.value
+                }
+            )
+    
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "signal": ResponseSignal.VECTORDB_FILE_FOUND.value,
+            "results": results
+        }
+    )
