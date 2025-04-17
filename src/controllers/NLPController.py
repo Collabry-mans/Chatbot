@@ -81,3 +81,10 @@ class NLPController(BaseController):
             return False
 
         return results
+    
+    def delete_file_from_vectorDB_by_ID(self, project: Project,project_id:str):
+        ans=self.vectordb_client.delete_document_by_id(
+            collection_name=self.collection_name,
+            doc_id=project_id
+        )
+        return ans
