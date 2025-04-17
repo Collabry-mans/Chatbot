@@ -153,7 +153,16 @@ class MilvusDBProvider(VectorDBInterface):
                 return False
 
         return True
-            
+    def delete_document_by_id(self,collection_name:str,doc_id:str):
+        expre=f"doc_id=={doc_id}"
+        results=self.client.delete(
+            collection_name=collection_name,
+            filter=expre)
+        if results["delete_cnt"]==0:
+            return False
+        else:
+            return True
+        
     def search_by_vector(self, collection_name: str, vector: list, limit: int = 5):
 
         return self.client.search(
