@@ -1,5 +1,5 @@
 from .providers import MilvusDBProvider
-from VectorDBEnum import VectorDBEnums
+from .VectorDBEnum import VectorDBEnums
 
 class VectorDBProviderFactory:
     def __init__(self,config):
@@ -10,5 +10,5 @@ class VectorDBProviderFactory:
             return MilvusDBProvider(
                 db_path=self.config.VECTOR_DB_PATH,
                 token=self.config.VECTOR_DB_TOKEN,
-                distance_method=None
+                distance_method="L2"
             )
