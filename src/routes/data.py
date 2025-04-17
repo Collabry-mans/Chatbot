@@ -77,8 +77,8 @@ async def upload_data(request:Request,project_id:str,file:UploadFile,app_setting
 async def process_endpoint(request:Request,project_id:str,process_request:processRequest):
     
     chunk_size=process_request.chunk_size
-    overlap_size=process_request.overlap
-    do_rest=process_request.do_rest
+    overlap_size=process_request.overlap_size
+    do_rest=process_request.do_reset
 
     project_model=await ProjectModel.create_instance(
         db_client=request.app.db_client
