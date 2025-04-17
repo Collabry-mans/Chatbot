@@ -19,7 +19,7 @@ async def startup_span():
     app.embedding_client=llm_provier_factory.create(provider=settings.EMBEDDING_BACKEND)
     app.embedding_client.set_embedding_model(model_id=settings.EMBEDDING_MODEL_ID,
                                              embedding_size=settings.EMBEDDING_MODEL_SIZE)
-    app.vectordb_client=VectorDBProviderFactory.create(
+    app.vectordb_client=vectordb_provider_factory.create(
         provider=settings.VECTOR_DB_BACKEND
     )
     app.vectordb_client.connect()
