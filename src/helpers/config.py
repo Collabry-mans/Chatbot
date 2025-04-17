@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     VECTOR_DB_PATH:str
     VECTOR_DB_TOKEN:str
     VECTOR_DB_DISTANCE_METRIC:str
+    VECTOR_DB_COLLECTION_NAME:str
     class Config:
         env_file=".env"
 
