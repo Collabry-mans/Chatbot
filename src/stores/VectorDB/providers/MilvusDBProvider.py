@@ -67,10 +67,10 @@ class MilvusDBProvider(VectorDBInterface):
                 enable_dynamic_field=True,
             )
             schema.add_field(field_name="metadata",datatype=DataType.JSON)
-            schema.add_field(field_name="record_id",datatype=DataType.VARCHAR)
-            schema.add_field(field_name="doc_id",datatype=DataType.VARCHAR)
+            schema.add_field(field_name="record_id",datatype=DataType.VARCHAR,is_primary=True,auto_id=True,max_length=2500)
+            schema.add_field(field_name="doc_id",datatype=DataType.VARCHAR,max_length=2500)
             schema.add_field(field_name="vector", datatype=DataType.FLOAT_VECTOR, dim=embedding_size)
-            schema.add_field(field_name="text", datatype=DataType.VARCHAR, max_length=1050)
+            schema.add_field(field_name="text", datatype=DataType.VARCHAR, max_length=2500)
             index_params = self.client.prepare_index_params()
 
             index_params.add_index(
@@ -127,6 +127,9 @@ class MilvusDBProvider(VectorDBInterface):
 
         if doc_ids is None:
             return False
+        
+        if len(vectors)<batch_size:
+            batch_size=len(vectors)
 
         for i in range(0, len(texts), batch_size):
             batch_end = i + batch_size
@@ -155,14 +158,13 @@ class MilvusDBProvider(VectorDBInterface):
 
         return True
     def delete_document_by_id(self,collection_name:str,doc_id:str):
-        expre=f"doc_id=={doc_id}"
+        expre=f"doc_id==\"{doc_id}\""
         results=self.client.delete(
             collection_name=collection_name,
             filter=expre)
-        if results["delete_cnt"]==0:
-            return False
-        else:
-            return True
+        return results["delete_count"]
+          
+        
         
     def search_by_vector(self, collection_name: str, vector: list, limit: int = 5):
 
