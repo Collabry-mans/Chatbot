@@ -7,7 +7,7 @@ import json
 class NLPController(BaseController):
 
     def __init__(self, vectordb_client, generation_client, 
-                 embedding_client, template_parser):
+                 embedding_client, template_parser=None):
         super().__init__()
         self.collection_name=self.app_settings.VECTOR_DB_COLLECTION_NAME
         self.vectordb_client = vectordb_client
@@ -34,14 +34,11 @@ class NLPController(BaseController):
         
 
         # step2: manage items
-        texts = [ c.chunk_text for c in chunks ]
-        metadata = [ c.chunk_metadata for c in  chunks]
-        vectors = [
-            self.embedding_client.embed_text(text=text, 
-                                             document_type=DocumentTypeEnum.DOCUMENT.value)
-            for text in texts
-        ]
-
+        texts = [ c["chunk_text"] for c in chunks ]
+        metadata = [ c["chunk_metadata"] for c in  chunks]
+        vectors = self.embedding_client.embed_text(text=texts, 
+                                            document_type=DocumentTypeEnum.DOCUMENT.value)
+        
         # step3: create collection if not exists
         _ = self.vectordb_client.create_collection(
             collection_name=self.collection_name,
@@ -82,7 +79,7 @@ class NLPController(BaseController):
 
         return results
     
-    def delete_file_from_vectorDB_by_ID(self, project: Project,project_id:str):
+    def delete_file_from_vectorDB_by_ID(self,project_id:str):
         ans=self.vectordb_client.delete_document_by_id(
             collection_name=self.collection_name,
             doc_id=project_id
