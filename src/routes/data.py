@@ -8,7 +8,7 @@ from models.ChunkModel import ChunkModel
 from models.db_schemes import DataChunk,Asset
 from models.AssetModel import AssetModel
 from models.enums.AssetTypeEnum import AssetTypeEnum
-from controllers import DataController,ProjectController,ProcessController
+from controllers import DataController,ProjectController,ProcessController,NLPController
 import aiofiles
 import logging
 import os
@@ -26,14 +26,13 @@ async def upload_and_process_data(
     request: Request,
     project_id: str,
     file: UploadFile,
-    chunk_size: int = 5000,
+    chunk_size: int = 1000,
     overlap_size: int = 50,
     app_settings: Settings = Depends(get_settings)
 ):
     # Initialize project
     project_model = await ProjectModel.create_instance(db_client=request.app.db_client)
     project = await project_model.get_project_or_create_one(project_id=project_id)
-
     # Validate file
     data_controller = DataController()
     is_valid, signal = data_controller.validate_uploaded_file(file=file)
@@ -102,5 +101,104 @@ async def upload_and_process_data(
             "file_id": file_id,
             "chunks": chunks,
             "total_chunks": len(chunks)
+        }
+    )
+
+@data_router.post("/upload_process_index/{project_id}")
+async def upload_process_and_index(
+    request: Request,
+    project_id: str,
+    file: UploadFile,
+    chunk_size: int = 500,
+    overlap_size: int = 50,
+    do_reset: int = 0,  # 1 means reset, 0 means append
+    app_settings: Settings = Depends(get_settings)
+):
+    # Step 1: Create/Get Project
+    project_model = await ProjectModel.create_instance(db_client=request.app.db_client)
+    project = await project_model.get_project_or_create_one(project_id=project_id)
+
+    # Step 2: Validate File
+    data_controller = DataController()
+    is_valid, signal = data_controller.validate_uploaded_file(file=file)
+    if not is_valid:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"signal": ResponseSignal.FILE_UPLOADED_FAILED.value}
+        )
+
+    # Step 3: Save File Temporarily
+    file_path, file_id = data_controller.generate_unique_filepath(
+        original_file_name=file.filename,
+        project_id=project_id
+    )
+    try:
+        async with aiofiles.open(file_path, "wb") as f:
+            while chunk := await file.read(app_settings.FILE_DEFAULT_CHUNK_SIZE):
+                await f.write(chunk)
+    except Exception as e:
+        logger.error(f"Error while uploading file: {str(e)}")
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"signal": ResponseSignal.FILE_UPLOADED_FAILED.value}
+        )
+
+    # Step 4: Process File Content into Chunks
+    process_controller = ProcessController(project_id=project_id)
+    file_content = process_controller.get_file_content(file_id=file_id)
+    if file_content is None:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"signal": ResponseSignal.PROCESSING_FAILD.value}
+        )
+
+    file_chunks = process_controller.process_file_content(
+        file_content=file_content,
+        file_id=file_id,
+        chunk_size=chunk_size,
+        overlap=overlap_size
+    )
+    file_chunks = [
+        {
+            "chunk_text": chunk.page_content,
+            "chunk_metadata": chunk.metadata,
+            "chunk_order": i + 1
+        }
+        for i, chunk in enumerate(file_chunks)
+    ]
+    if not file_chunks:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"signal": ResponseSignal.PROCESSING_FAILD.value}
+        )
+
+    # Step 5: Directly Index Into Vector DB
+    nlp_controller = NLPController(
+        vectordb_client=request.app.vectordb_client,
+        generation_client=request.app.generation_client,
+        embedding_client=request.app.embedding_client
+    )
+
+    chunks_ids = [project_id for _ in  range(len(file_chunks))]
+    
+    is_inserted = nlp_controller.index_into_vector_db(
+        project=project_model,
+        chunks=file_chunks,
+        do_reset=do_reset,
+        chunks_ids=chunks_ids
+    )
+
+    if not is_inserted:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"signal": ResponseSignal.INSERT_INTO_VECTORDB_ERROR.value}
+        )
+
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "signal": ResponseSignal.INSERT_INTO_VECTORDB_success.value,
+            "file_id": file_id,
+            "total_chunks": len(file_chunks)
         }
     )
