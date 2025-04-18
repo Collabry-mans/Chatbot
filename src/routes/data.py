@@ -26,7 +26,7 @@ async def upload_and_process_data(
     request: Request,
     project_id: str,
     file: UploadFile,
-    chunk_size: int = 500,
+    chunk_size: int = 5000,
     overlap_size: int = 50,
     app_settings: Settings = Depends(get_settings)
 ):
@@ -91,13 +91,16 @@ async def upload_and_process_data(
         }
         for i, chunk in enumerate(file_chunks)
     ]
-
+    chunks=[
+        chunk.page_content 
+        for i,chunk in enumerate(file_chunks)
+    ]
     return JSONResponse(
         status_code=status.HTTP_200_OK,
         content={
             "signal": ResponseSignal.PROCESSING_SUCCESS.value,
             "file_id": file_id,
-            "chunks": chunks_data,
-            "total_chunks": len(chunks_data)
+            "chunks": chunks,
+            "total_chunks": len(chunks)
         }
     )
