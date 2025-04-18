@@ -7,8 +7,8 @@ class DataChunk(BaseModel):
     chunk_text:str=Field(...,min_length=1)
     chunk_metadate:dict
     chunk_order:int=Field(...,gt=0)
-    chunk_project_id:ObjectId
-    chunk_asset_id:ObjectId
+    chunk_project_id:Optional[ObjectId]
+    chunk_asset_id:Optional[ObjectId]
     
     class Config:
         arbitrary_types_allowed=True
