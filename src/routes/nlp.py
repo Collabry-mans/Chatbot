@@ -154,7 +154,7 @@ async def delete(request: Request, project_id: str):
 
     if  results==0:
         return JSONResponse(
-                status_code=status.HTTP_204_NO_CONTENT,
+                status_code=status.HTTP_200_OK,
                 content={
                     "signal": ResponseSignal.VECTORDB_FILE_NOT_FOUND.value
                 }
