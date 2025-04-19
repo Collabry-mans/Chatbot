@@ -141,7 +141,7 @@ async def search_index(request: Request, project_id: str, search_request: Search
         }
     )
 
-@nlp_router.post("/index/delete/{project_id}")
+@nlp_router.delete("/index/delete/{project_id}")
 async def delete(request: Request, project_id: str):
 
     nlp_controller = NLPController(
