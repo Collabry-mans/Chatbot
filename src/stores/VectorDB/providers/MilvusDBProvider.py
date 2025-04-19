@@ -172,6 +172,7 @@ class MilvusDBProvider(VectorDBInterface):
             collection_name=collection_name,
             data=[vector],
             anns_field="vector",
+            output_fields=["text"],
             limit=limit,
             search_params=self.distance_method
         )
