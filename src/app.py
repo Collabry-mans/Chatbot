@@ -4,6 +4,7 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from helpers.config import Settings,get_settings
 from stores.llm.LLMProvierFactory import LLMProviderFactory
 from stores.VectorDB.VectorDBProviderFactory import VectorDBProviderFactory
+from stores.ChatHistoryManager import ChatHistoryManager
 app=FastAPI()
 
 async def startup_span():
@@ -22,6 +23,7 @@ async def startup_span():
     app.vectordb_client=vectordb_provider_factory.create(
         provider=settings.VECTOR_DB_BACKEND
     )
+    app.chat_history_manager=ChatHistoryManager()
     app.vectordb_client.connect()
 
 async def shutdown_span():
