@@ -8,6 +8,7 @@ from langchain.memory import ConversationBufferMemory
 from langchain_community.chat_message_histories import FileChatMessageHistory
 from langchain_core.prompts import ChatPromptTemplate,HumanMessagePromptTemplate,MessagesPlaceholder
 from helpers.config import get_settings
+from ChatHistoryManager import ChatHistoryManager
 from langgraph.graph import START,MessagesState,StateGraph,END
 import logging
 import os
@@ -26,16 +27,9 @@ class GIMINIProvider(LLMInterface):
         self.default_input_max_characters = default_input_max_characters
         self.default_generation_max_output_tokens = default_generation_max_output_tokens
         self.default_generation_temperature = default_generation_temperature
-
         self.generation_model_id = generation_model_id
         self.embedding_model_id = embedding_model_id
         self.embedding_size = None  
-        self.history=FileChatMessageHistory(".chat_history.json")
-        self.memory=ConversationBufferMemory(
-            memory_key="chat_history",
-            chat_memory=self.history,
-            return_messages=True
-        )
         self.logger = logging.getLogger(__name__)
 
     def set_generation_model(self, model_id: str):
@@ -48,7 +42,7 @@ class GIMINIProvider(LLMInterface):
     def process_text(self, text: str):
         return text[:self.default_input_max_characters].strip()
 
-    def generate_text(self, prompt: str, chat_history: list = None,
+    def generate_text(self, prompt: str, user_id:str,chat_history_manager: ChatHistoryManager = None,
                       max_output_tokens: int = None, temperature: float = None):
         
         if not self.generation_model_id:
@@ -67,15 +61,30 @@ class GIMINIProvider(LLMInterface):
                 max_retries=2,
             )
 
-            if chat_history:
-                chat = model.start_chat(history=chat_history)
-                response = chat.send_message(self.process_text(prompt),
-                                             generation_config={"temperature": temperature, "max_output_tokens": max_output_tokens})
-                return response.text
-            else:
-                response = model.generate_content(self.process_text(prompt),
-                                                  generation_config={"temperature": temperature, "max_output_tokens": max_output_tokens})
-                return response.text
+            if chat_history_manager:
+                chat_history = chat_history_manager.get_conversation(user_id=user_id,max_messages=10)
+            elif not chat_history:
+                chat_history = []
+
+            chat = model.start_chat(history=[
+                AIMessage(content=msg["content"]) if msg["role"] == "ai" else
+                SystemMessage(content=msg["content"]) if msg["role"] == "system" else
+                HumanMessagePromptTemplate.from_template("{input}").format(input=msg["content"])
+                for msg in chat_history
+            ])
+
+            response = chat.send_message(self.process_text(prompt),
+                                        generation_config={
+                                            "temperature": temperature,
+                                            "max_output_tokens": max_output_tokens
+                                        })
+
+            if chat_history_manager:
+                chat_history_manager.add_message(user_id, "user", prompt)
+                chat_history_manager.add_message(user_id, "ai", response.text)
+
+            return response.text
+
         except Exception as e:
             self.logger.error(f"Error during text generation: {e}")
             return None
