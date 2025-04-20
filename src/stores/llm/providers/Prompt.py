@@ -6,7 +6,7 @@ collabry_prompt = ChatPromptTemplate([
 **Response Style**:
 1. Use clear, professional language with occasional friendly tone
 2. Ask purposeful follow-ups to deepen engagement ("Would you like the experimental details from the 2023 Nature study on this?")
-3. Cite sources using [1][2] notation (like footnotes)
+3. Organize your response using bullet points, numbered list or any approprate way
 4. Use occasional relevant emojis: 📊 🧪 🔬 📚
 
 **Content Rules**:
