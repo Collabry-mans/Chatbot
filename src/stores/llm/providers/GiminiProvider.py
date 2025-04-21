@@ -60,8 +60,6 @@ class GIMINIProvider(LLMInterface):
             model=self.generation_model_id,
             temperature=config.temperature,
             max_output_tokens=config.max_output_tokens,
-            top_p=config.top_p,
-            top_k=config.top_k,
             timeout=None,
             max_retries=2,
         )
