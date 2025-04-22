@@ -42,16 +42,13 @@ async def get_project_index_info(request: Request, project_id: str):
     )
 
 
-@nlp_router.post("/index/search/{project_id}")
-async def search_index(request: Request, project_id: str, search_request: SearchRequest):
+@nlp_router.post("/index/search/{user_id}")
+async def search_index(request: Request,question:str,user_id:str, search_request: SearchRequest):
     
     project_model = await ProjectModel.create_instance(
         db_client=request.app.db_client
     )
 
-    project = await project_model.get_project_or_create_one(
-        project_id=project_id
-    )
 
     nlp_controller = NLPController(
         vectordb_client=request.app.vectordb_client,
@@ -61,7 +58,7 @@ async def search_index(request: Request, project_id: str, search_request: Search
     )
 
     results = nlp_controller.search_vector_db_collection(
-        project=project, text=search_request.text, limit=search_request.limit
+      text=search_request.text, limit=search_request.limit
     )
 
     if not results:
@@ -72,6 +69,12 @@ async def search_index(request: Request, project_id: str, search_request: Search
                 }
             )
     
+    answer=nlp_controller.get_chatbot_answer(
+        prompt=question,
+        user_id=user_id,
+        context=results,
+        chat_history_manager=request.app.chat_history_manager
+    )
     return JSONResponse(
         status_code=status.HTTP_200_OK,
         content={
