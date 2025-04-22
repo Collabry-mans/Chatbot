@@ -56,7 +56,7 @@ class NLPController(BaseController):
         )
 
         return True
-    def search_vector_db_collection(self, project: Project, text: str, limit: int = 10):
+    def search_vector_db_collection(self, text: str, limit: int = 10):
 
 
 
@@ -76,12 +76,28 @@ class NLPController(BaseController):
 
         if not results:
             return False
+        
+        context=[]
+        for hits in results:
+            for hit in hits:
+                # gets the value of an output field specified in the search request.
+                # dynamic fields are supported, but vector fields are not supported yet.    
+                context.append(hit.entity.get('email'))
 
-        return results
+        return context
     
     def delete_file_from_vectorDB_by_ID(self,project_id:str):
         ans=self.vectordb_client.delete_document_by_id(
             collection_name=self.collection_name,
             doc_id=project_id
+        )
+        return ans
+    
+    def get_chatbot_answer(self,prompt,user_id,context,chat_history_manager):
+        ans=self.generation_client.generate_text(
+            prompt=prompt,
+            user_id=user_id,
+            context=context,
+            chat_history_manager=chat_history_manager
         )
         return ans
