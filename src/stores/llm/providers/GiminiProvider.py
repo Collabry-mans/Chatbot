@@ -6,13 +6,11 @@ from langchain.schema import AIMessage,HumanMessage
 from langchain_core.messages import SystemMessage
 from typing import Optional, Dict, List, Any
 from langgraph.graph import Graph, END
+from .Prompt import collabry_prompt
 from langgraph.prebuilt import ToolNode
-from ..GenerationScheme import GenerationConfig
-from langchain.memory import ConversationBufferMemory
-from langchain_community.chat_message_histories import FileChatMessageHistory
-from langchain_core.prompts import ChatPromptTemplate,HumanMessagePromptTemplate,MessagesPlaceholder
+from ...ChatHistoryManager import ChatHistoryManager
 from helpers.config import get_settings
-from ChatHistoryManager import ChatHistoryManager
+from ..GenerationScheme.GenerationScheme import GenerationConfig
 from langgraph.graph import START,MessagesState,StateGraph,END
 from tenacity import retry, stop_after_attempt, wait_exponential
 import logging
@@ -32,7 +30,6 @@ class GIMINIProvider(LLMInterface):
                 - default_max_tokens: Default maximum tokens (default: 2048)
                 - default_temperature: Default temperature (default: 0.7)
                 - embedding_model_id: ID of the embedding model
-                - logger: Logger instance
         """
         self.generation_model_id = config.get("generation_model_id")
         self.default_config = GenerationConfig(
@@ -40,7 +37,6 @@ class GIMINIProvider(LLMInterface):
             temperature=config.get("default_temperature", 0.7)
         )
         self.embedding_model_id = config.get("embedding_model_id")
-
         self.logger = logging.getLogger(__name__)
         self._workflow = self._build_workflow()
 
@@ -79,6 +75,18 @@ class GIMINIProvider(LLMInterface):
         
         return {"prepared_messages": messages}
     
+    def _format_context(self, documents: List) -> str:
+        """Convert retrieved docs into numbered citations"""
+        if not documents:
+            return ""
+        
+        context_lines = ["**Relevant Context:**"]
+        for i, doc in enumerate(documents, 1):
+            context_lines.append(
+                f"[context{i}] {doc})"
+            )
+        return "\n".join(context_lines)
+        
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
     def _generate_response(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Generate response from the model"""
@@ -86,9 +94,13 @@ class GIMINIProvider(LLMInterface):
         messages = state["prepared_messages"]
         prompt = state["prompt"]
         config = state["config"]
-        
+        context = state.get("context", "")
+
+        # Format the full prompt with context
+        full_prompt = f"{context}\n\nQuestion: {prompt}" if context else prompt
+    
         # Add the current prompt to messages
-        messages.append(HumanMessage(content=prompt))
+        messages.append(HumanMessage(content=full_prompt))
         
         # Generate response
         response = model.invoke(
@@ -114,8 +126,8 @@ class GIMINIProvider(LLMInterface):
             manager.add_message(user_id, "user", prompt)
             manager.add_message(user_id, "ai", response)
         
-        return {"status": "completed"}
-    
+        return {"status": "completed"}   
+     
     def _handle_error(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Handle errors in the workflow"""
         error = state.get("error")
@@ -140,12 +152,6 @@ class GIMINIProvider(LLMInterface):
         workflow.add_edge("generate_response", "update_history")
         workflow.add_edge("update_history", END)
         
-        # Error handling
-        workflow.add_edge("initialize_model", "handle_error")
-        workflow.add_edge("prepare_history", "handle_error")
-        workflow.add_edge("generate_response", "handle_error")
-        workflow.add_edge("handle_error", END)
-        
         # Set entry point
         workflow.set_entry_point("initialize_model")
         
@@ -155,6 +161,7 @@ class GIMINIProvider(LLMInterface):
         self,
         prompt: str,
         user_id: str,
+        context:List=None,
         chat_history_manager: Optional[ChatHistoryManager] = None,
         generation_config: Optional[GenerationConfig] = None
     ) -> Optional[str]:
@@ -182,6 +189,8 @@ class GIMINIProvider(LLMInterface):
                 "config": generation_config or self.default_config,
                 "chat_history": [],
             }
+            if context:
+                state["context"]=self._format_context(context)
             
             if chat_history_manager:
                 state["chat_history_manager"] = chat_history_manager
