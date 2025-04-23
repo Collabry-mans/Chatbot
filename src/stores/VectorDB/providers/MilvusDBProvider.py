@@ -18,6 +18,8 @@ class MilvusDBProvider(VectorDBInterface):
                                    DistanceMethodEnums.L2.value]:
             raise ValueError(f"Invalid distance method: {distance_method}")
         self.distance_method = distance_method
+        self.search_params = {"metric_type": self.distance_method , "params": {"nprobe": 10}}    
+
         self.logger = logging.getLogger(__name__)
 
     def connect(self):
@@ -174,5 +176,5 @@ class MilvusDBProvider(VectorDBInterface):
             anns_field="vector",
             output_fields=["text"],
             limit=limit,
-            search_params=self.distance_method
+            search_params=self.search_params
         )
