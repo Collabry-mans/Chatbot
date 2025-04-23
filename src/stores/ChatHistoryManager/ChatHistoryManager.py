@@ -64,9 +64,7 @@ class ChatHistoryManager:
     def add_message(
         self,
         user_id: str,
-        role: str,
-        content: str,
-        metadata: Optional[Dict] = None
+        message
     ) -> None:
         """Add a new message to history
         
@@ -84,14 +82,6 @@ class ChatHistoryManager:
                 "updated_at": datetime.now().isoformat(),
                 "messages": []
             }
-
-        message = {
-            "id": str(uuid.uuid4()),
-            "role": role,
-            "content": self._encrypt(content),
-            "timestamp": datetime.now().isoformat(),
-            "metadata": metadata or {}
-        }
 
         data["conversations"][user_id]["messages"].append(message)
         data["conversations"][user_id]["updated_at"] = datetime.now().isoformat()
