@@ -101,6 +101,7 @@ class GIMINIProvider(LLMInterface):
     
         # Add the current prompt to messages
         messages.append(HumanMessage(content=full_prompt))
+        messages.append(collabry_prompt)
         
         # Generate response
         response = model.invoke(
