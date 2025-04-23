@@ -7,13 +7,12 @@ import json
 class NLPController(BaseController):
 
     def __init__(self, vectordb_client, generation_client, 
-                 embedding_client, template_parser=None):
+                 embedding_client):
         super().__init__()
         self.collection_name=self.app_settings.VECTOR_DB_COLLECTION_NAME
         self.vectordb_client = vectordb_client
         self.generation_client = generation_client
         self.embedding_client = embedding_client
-        self.template_parser = template_parser
 
     def create_collection_name(self, project_id: str):
         return f"collection_{project_id}".strip()
@@ -59,12 +58,12 @@ class NLPController(BaseController):
     def search_vector_db_collection(self, text: str, limit: int = 10):
 
 
-
+        vector=[]
         # step2: get text embedding vector
         vector = self.embedding_client.embed_text(text=text, 
                                                  document_type=DocumentTypeEnum.QUERY.value)
 
-        if not vector or len(vector) == 0:
+        if len(vector) == 0:
             return False
 
         # step3: do semantic search
@@ -78,11 +77,9 @@ class NLPController(BaseController):
             return False
         
         context=[]
-        for hits in results:
-            for hit in hits:
-                # gets the value of an output field specified in the search request.
-                # dynamic fields are supported, but vector fields are not supported yet.    
-                context.append(hit.entity.get('email'))
+        for hits in results[0]:
+   
+            context.append(hits["entity"]['text'])
 
         return context
     
