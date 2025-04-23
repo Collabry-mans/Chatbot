@@ -95,6 +95,5 @@ class NLPController(BaseController):
             prompt=prompt,
             user_id=user_id,
             context=context,
-            chat_history_manager=chat_history_manager
         )
         return ans
