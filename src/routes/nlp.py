@@ -43,22 +43,16 @@ async def get_project_index_info(request: Request, project_id: str):
 
 
 @nlp_router.post("/index/search/{user_id}")
-async def search_index(request: Request,question:str,user_id:str, search_request: SearchRequest):
-    
-    project_model = await ProjectModel.create_instance(
-        db_client=request.app.db_client
-    )
-
+async def search_index(request: Request,user_id:str, search_request: SearchRequest):
 
     nlp_controller = NLPController(
         vectordb_client=request.app.vectordb_client,
         generation_client=request.app.generation_client,
         embedding_client=request.app.embedding_client,
-        template_parser=request.app.template_parser,
     )
 
     results = nlp_controller.search_vector_db_collection(
-      text=search_request.text, limit=search_request.limit
+      text=search_request.question, limit=search_request.limit
     )
 
     if not results:
@@ -70,7 +64,7 @@ async def search_index(request: Request,question:str,user_id:str, search_request
             )
     
     answer=nlp_controller.get_chatbot_answer(
-        prompt=question,
+        prompt=search_request.question,
         user_id=user_id,
         context=results,
         chat_history_manager=request.app.chat_history_manager
@@ -79,7 +73,7 @@ async def search_index(request: Request,question:str,user_id:str, search_request
         status_code=status.HTTP_200_OK,
         content={
             "signal": ResponseSignal.VECTORDB_SEARCH_SUCCESS.value,
-            "results": [ result.dict()  for result in results ]
+            "results": answer
         }
     )
 
@@ -90,7 +84,6 @@ async def delete(request: Request, project_id: str):
         vectordb_client=request.app.vectordb_client,
         generation_client=request.app.generation_client,
         embedding_client=request.app.embedding_client,
-      #  template_parser=request.app.template_parser,
     )
     results=nlp_controller.delete_file_from_vectorDB_by_ID(project_id=str(project_id))
 
