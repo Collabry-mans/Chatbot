@@ -95,7 +95,7 @@ class ChatHistoryManager:
     def get_conversation(
         self,
         user_id: str,
-        max_messages: Optional[int] = None,
+        max_messages: Optional[int] = 3,
         include_metadata: bool = False
     ) -> List[Dict]:
         """Retrieve conversation history
@@ -108,18 +108,20 @@ class ChatHistoryManager:
         data = self._read_data()
         if user_id not in data["conversations"]:
             return []
-
         messages = data["conversations"][user_id]["messages"]
         if max_messages:
             messages = messages[-max_messages:]
+ 
+        ans=[]
+        for thread in messages:
+            for msg in thread:
+                x={
+                    "role":msg["role"],
+                    "content":msg["content"]
+                }
+                ans.append(x)
+        return ans
 
-        return [{
-            "id": msg["id"],
-            "role": msg["role"],
-            "content": self._decrypt(msg["content"]),
-            "timestamp": msg["timestamp"],
-            **({"metadata": msg["metadata"]} if include_metadata else {})
-        } for msg in messages]
 
     def cleanup_old_conversations(self):
         """Remove conversations older than retention_days"""
