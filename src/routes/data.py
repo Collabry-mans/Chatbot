@@ -30,9 +30,7 @@ async def upload_and_process_data(
     overlap_size: int = 50,
     app_settings: Settings = Depends(get_settings)
 ):
-    # Initialize project
-    project_model = await ProjectModel.create_instance(db_client=request.app.db_client)
-    project = await project_model.get_project_or_create_one(project_id=project_id)
+
     # Validate file
     data_controller = DataController()
     is_valid, signal = data_controller.validate_uploaded_file(file=file)
@@ -114,9 +112,7 @@ async def upload_process_and_index(
     do_reset: int = 0,  # 1 means reset, 0 means append
     app_settings: Settings = Depends(get_settings)
 ):
-    # Step 1: Create/Get Project
-    project_model = await ProjectModel.create_instance(db_client=request.app.db_client)
-    project = await project_model.get_project_or_create_one(project_id=project_id)
+    
 
     # Step 2: Validate File
     data_controller = DataController()
@@ -182,7 +178,7 @@ async def upload_process_and_index(
     chunks_ids = [project_id for _ in  range(len(file_chunks))]
     
     is_inserted = nlp_controller.index_into_vector_db(
-        project=project_model,
+
         chunks=file_chunks,
         do_reset=do_reset,
         chunks_ids=chunks_ids
